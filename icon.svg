@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#060912"/>
+  <circle cx="256" cy="256" r="220" fill="#0a1020"/>
+  <!-- Crescent -->
+  <path d="M256 100 Q370 140 370 256 Q370 372 256 412 Q310 380 310 256 Q310 132 256 100Z" fill="#d4a44c" opacity="0.9"/>
+  <!-- Star -->
+  <polygon points="310,180 316,198 334,198 320,208 326,226 310,216 294,226 300,208 286,198 304,198" fill="#d4a44c" opacity="0.85"/>
+  <!-- Glow -->
+  <circle cx="256" cy="256" r="218" fill="none" stroke="#d4a44c" stroke-width="2" opacity="0.2"/>
+</svg>

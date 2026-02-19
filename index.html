@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Vakti · Ramazan Vakitleri</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#060912">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vakti">
+<link rel="apple-touch-icon" href="icon.svg">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── RESET & VARS ── */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --gold:#d4a44c;--gold-b:#f0c060;--gold-d:#8a6a2e;--gold-g:rgba(212,164,76,.2);
+  --bg:#060912;--bg2:#090d1c;--bg3:#0e1428;--card:#121930;--card2:#172040;
+  --inp:#0c1124;--br:rgba(212,164,76,.17);--brb:rgba(212,164,76,.42);
+  --tx:#ddd8c8;--txs:#8898b8;--txd:#3d4d6a;
+  --r:16px;--rs:10px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── BG CANVAS ── */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── LAYOUT ── */
+.page{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 16px 120px}
+
+/* ── TOASTS / BANNERS ── */
+.banner{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;border-radius:var(--rs);font-size:12px;font-weight:600;
+  margin-bottom:12px;letter-spacing:.5px;animation:fadeDown .4s ease both;
+}
+.banner-offline{background:rgba(224,85,85,.12);border:1px solid rgba(224,85,85,.3);color:#e08888}
+.banner-loading{background:rgba(212,164,76,.08);border:1px solid var(--br);color:var(--gold-d)}
+.banner-ok{background:rgba(80,200,122,.08);border:1px solid rgba(80,200,122,.25);color:#78c89a}
+.banner-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot-red{background:#e05555;box-shadow:0 0 6px #e05555}
+.dot-gold{background:var(--gold);box-shadow:0 0 6px var(--gold);animation:pulse 1.2s infinite}
+.dot-green{background:#50c87a;box-shadow:0 0 6px #50c87a}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:12px;padding:20px 0 16px;border-bottom:1px solid var(--br);margin-bottom:24px;
+  animation:fadeDown .6s ease both;
+}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:34px;height:34px;flex-shrink:0}
+.logo-text{font-family:'Cinzel',serif;font-size:15px;font-weight:700;color:var(--gold);letter-spacing:1px;line-height:1.15}
+.logo-sub{font-size:9px;letter-spacing:3px;color:var(--txd);text-transform:uppercase}
+.topbar-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* ── CITY SELECT ── */
+.city-wrap{position:relative}
+.city-sel{
+  appearance:none;background:var(--inp);border:1px solid var(--br);border-radius:var(--rs);
+  color:var(--tx);font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;
+  padding:9px 34px 9px 12px;cursor:pointer;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.city-sel:focus,.city-sel:hover{border-color:var(--brb);box-shadow:0 0 0 3px rgba(212,164,76,.1)}
+.city-sel option{background:#111827}
+.city-chev{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--gold-d);font-size:9px;pointer-events:none}
+
+/* GEO BUTTON */
+.geo-btn{
+  display:flex;align-items:center;gap:6px;background:var(--inp);border:1px solid var(--br);
+  border-radius:var(--rs);color:var(--txs);font-family:'Nunito',sans-serif;font-size:12px;
+  font-weight:600;padding:9px 14px;cursor:pointer;transition:all .2s;white-space:nowrap;
+}
+.geo-btn:hover{border-color:var(--brb);color:var(--gold);background:rgba(212,164,76,.06)}
+.geo-btn svg{flex-shrink:0}
+
+/* HIJRI BADGE */
+.hijri-badge{
+  background:rgba(212,164,76,.07);border:1px solid var(--br);border-radius:100px;
+  padding:6px 14px;font-size:11px;color:var(--gold-d);letter-spacing:1.5px;white-space:nowrap;
+}
+
+/* ── HERO ── */
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;animation:fadeDown .85s ease both}
+
+/* ── NEXT EVENT CARD ── */
+.next-card{
+  background:linear-gradient(145deg,#111a38,#0c1228);
+  border:1px solid var(--brb);border-radius:var(--r);padding:28px 28px 24px;
+  position:relative;overflow:hidden;
+}
+.next-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.next-card::after{content:'';position:absolute;bottom:-50px;right:-50px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(212,164,76,.07),transparent 70%);pointer-events:none}
+.ev-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--txd);margin-bottom:5px}
+.ev-name{font-family:'Cinzel',serif;font-size:18px;font-weight:600;color:var(--gold);margin-bottom:2px}
+.ev-time{font-family:'Cinzel',serif;font-size:clamp(40px,7vw,58px);font-weight:700;color:#fff;line-height:1;text-shadow:0 0 40px rgba(212,164,76,.35);margin-bottom:20px;letter-spacing:2px}
+.cd-label{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--txd);margin-bottom:10px}
+.cd-row{display:flex;align-items:flex-end;gap:8px}
+.cd-unit{text-align:center}
+.cd-num{font-family:'Cinzel',serif;font-size:clamp(26px,4vw,36px);font-weight:700;color:var(--gold-b);line-height:1;min-width:2ch;display:block}
+.cd-lbl{font-size:8px;letter-spacing:2px;color:var(--txd);text-transform:uppercase;margin-top:3px;display:block}
+.cd-sep{font-family:'Cinzel',serif;font-size:clamp(20px,3vw,26px);color:var(--gold-d);margin-bottom:16px;line-height:1}
+.device-row{font-size:10px;color:var(--txd);letter-spacing:1px;padding-top:10px;border-top:1px solid rgba(255,255,255,.04);margin-top:10px}
+
+/* ── PROGRESS CARD ── */
+.prog-card{
+  background:linear-gradient(145deg,#0f1932,#0b1022);
+  border:1px solid var(--br);border-radius:var(--r);padding:28px;
+  display:flex;flex-direction:column;gap:18px;
+}
+.prog-head{display:flex;justify-content:space-between;align-items:flex-start}
+.prog-title{font-family:'Cinzel',serif;font-size:14px;color:var(--tx);font-weight:600}
+.prog-sub{font-size:11px;color:var(--txd);margin-top:4px;letter-spacing:.5px}
+.prog-pct{font-family:'Cinzel',serif;font-size:32px;font-weight:700;color:var(--gold);line-height:1}
+.fast-ends{display:flex;justify-content:space-between;font-size:11px;color:var(--txs);margin-bottom:8px}
+.fast-ends span:last-child{color:var(--gold)}
+.track{position:relative;height:8px;background:rgba(255,255,255,.05);border-radius:100px;overflow:visible}
+.fill{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold),var(--gold-b));border-radius:100px;transition:width 1s ease;position:relative;min-width:0}
+.fill::after{content:'';position:absolute;right:0;top:50%;transform:translate(50%,-50%);width:14px;height:14px;border-radius:50%;background:var(--gold-b);box-shadow:0 0 10px var(--gold),0 0 20px var(--gold-g)}
+.fast-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.fstat{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--rs);padding:12px 8px;text-align:center}
+.fstat-v{font-family:'Cinzel',serif;font-size:16px;font-weight:600;color:var(--gold-b);display:block}
+.fstat-l{font-size:8px;letter-spacing:1.5px;color:var(--txd);text-transform:uppercase;margin-top:3px;display:block}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-family:'Cinzel',serif;font-size:11px;font-weight:600;color:var(--txd);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--br)}
+
+/* ── PRAYER GRID ── */
+.pray-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px;animation:fadeUp .95s ease both}
+.pray-card{background:var(--card);border:1px solid var(--br);border-radius:var(--r);padding:18px 10px 16px;text-align:center;position:relative;overflow:hidden;transition:transform .25s,border-color .25s,background .25s,box-shadow .25s;cursor:default}
+.pray-card:hover{transform:translateY(-3px);background:var(--card2);border-color:var(--brb);box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.pray-card.active{border-color:var(--gold);background:linear-gradient(150deg,#1a2540,#111830);box-shadow:0 0 22px var(--gold-g)}
+.pray-card.active::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.active-dot{display:none;position:absolute;top:10px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--gold);box-shadow:0 0 6px var(--gold)}
+.active .active-dot{display:block;animation:pulse 1.5s infinite}
+.p-icon{width:34px;height:34px;margin:0 auto 10px;background:rgba(212,164,76,.07);border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(212,164,76,.1)}
+.active .p-icon{background:rgba(212,164,76,.14);border-color:rgba(212,164,76,.3)}
+.p-name{font-size:8px;letter-spacing:2px;color:var(--txd);text-transform:uppercase;margin-bottom:5px;display:block}
+.p-time{font-family:'Cinzel',serif;font-size:clamp(16px,2.2vw,22px);font-weight:700;color:var(--tx)}
+.active .p-time{color:var(--gold-b);text-shadow:0 0 14px rgba(212,164,76,.45)}
+.now-badge{background:var(--gold);color:#000;font-size:7px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:100px;text-transform:uppercase;vertical-align:middle;margin-left:4px}
+
+/* ── SKELETON ── */
+.skel{background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:6px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* ── TABS ── */
+.tabs-nav{display:flex;gap:4px;background:var(--card);border:1px solid var(--br);border-radius:var(--r);padding:5px;margin-bottom:16px;width:fit-content;max-width:100%;overflow-x:auto}
+.tab-btn{background:none;border:none;color:var(--txd);font-family:'Nunito',sans-serif;font-size:12px;font-weight:600;padding:9px 18px;border-radius:10px;cursor:pointer;transition:all .2s;letter-spacing:.5px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tab-btn:hover{color:var(--tx);background:rgba(255,255,255,.04)}
+.tab-btn.active{background:linear-gradient(135deg,rgba(212,164,76,.18),rgba(212,164,76,.07));color:var(--gold);border:1px solid var(--br)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── QIBLA ── */
+.qibla-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.qibla-compass{background:var(--card);border:1px solid var(--br);border-radius:var(--r);padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.compass-svg{width:min(220px,80vw);height:min(220px,80vw);filter:drop-shadow(0 0 18px rgba(212,164,76,.13))}
+.needle-g{transform-origin:110px 110px;transition:transform 1.5s cubic-bezier(.34,1.56,.64,1)}
+.q-deg{font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:var(--gold)}
+.q-info{background:var(--card);border:1px solid var(--br);border-radius:var(--r);padding:24px}
+.q-info-title{font-family:'Cinzel',serif;font-size:16px;color:var(--tx);margin-bottom:8px}
+.q-info-sub{font-size:12px;color:var(--txs);line-height:1.7;margin-bottom:20px}
+.q-stats{display:flex;flex-direction:column;gap:10px}
+.q-stat{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05);border-radius:var(--rs)}
+.q-stat-name{font-size:11px;color:var(--txs);letter-spacing:.5px}
+.q-stat-val{font-family:'Cinzel',serif;font-size:13px;color:var(--gold);font-weight:600}
+
+/* ── CALENDAR ── */
+.cal-wrap{background:var(--card);border:1px solid var(--br);border-radius:var(--r);overflow:hidden}
+.cal-scroll{overflow-x:auto}
+.cal-table{width:100%;border-collapse:collapse;min-width:580px}
+.cal-th{padding:13px 10px;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--txd);text-align:center;font-weight:700;background:rgba(212,164,76,.06);border-bottom:1px solid var(--br)}
+.cal-th:first-child{text-align:left;padding-left:16px}
+.cal-tr{border-bottom:1px solid rgba(255,255,255,.04);transition:background .2s}
+.cal-tr:last-child{border-bottom:none}
+.cal-tr:hover{background:rgba(255,255,255,.025)}
+.cal-tr.today{background:linear-gradient(90deg,rgba(212,164,76,.09),rgba(212,164,76,.04));border-bottom:1px solid rgba(212,164,76,.15)}
+.cal-td{padding:11px 10px;font-size:11px;color:var(--txs);text-align:center;font-weight:500}
+.cal-td:first-child{text-align:left;padding-left:16px}
+.cal-day{font-family:'Cinzel',serif;font-size:13px;font-weight:700;color:var(--tx);display:block}
+.today .cal-day{color:var(--gold)}
+.cal-hijri{font-size:9px;color:var(--txd);letter-spacing:.5px}
+.t-iftar{color:var(--gold);font-weight:700}
+.t-sahur{color:#7ab4e0}
+
+/* ── MOSQUE FOOTER ── */
+.mosque-footer{position:fixed;bottom:0;left:0;right:0;height:80px;pointer-events:none;z-index:0;opacity:.55}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .pray-grid{grid-template-columns:repeat(3,1fr)}
+  .qibla-wrap{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .hero{grid-template-columns:1fr}
+  .topbar-right{width:100%;justify-content:space-between}
+  .hijri-badge{display:none}
+}
+@media(max-width:480px){
+  .pray-grid{grid-template-columns:repeat(2,1fr)}
+  .fast-stats{grid-template-columns:1fr 1fr 1fr}
+  .page{padding:0 12px 120px}
+  .next-card,.prog-card{padding:22px 18px 20px}
+  .tabs-nav{width:100%;box-sizing:border-box}
+  .tab-btn{padding:9px 12px;font-size:11px}
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+
+/* ── INSTALL PROMPT ── */
+.install-bar{
+  position:fixed;bottom:0;left:0;right:0;
+  background:linear-gradient(90deg,#0e1428,#111a36);
+  border-top:1px solid var(--br);
+  padding:12px 20px 12px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  z-index:100;animation:slideUp .4s ease both;
+  box-shadow:0 -8px 24px rgba(0,0,0,.4);
+}
+.install-bar.hidden{display:none}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.install-text{font-size:13px;font-weight:600;color:var(--tx);flex:1}
+.install-text span{color:var(--gold);font-family:'Cinzel',serif}
+.install-sub{font-size:10px;color:var(--txd);margin-top:2px;letter-spacing:.5px}
+.install-btn{background:var(--gold);color:#000;border:none;border-radius:var(--rs);font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;padding:10px 20px;cursor:pointer;white-space:nowrap;letter-spacing:.5px;flex-shrink:0}
+.install-close{background:none;border:none;color:var(--txd);font-size:18px;cursor:pointer;padding:4px 8px;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="page">
+
+  <!-- STATUS BANNERS -->
+  <div id="statusBanner"></div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none">
+        <circle cx="18" cy="18" r="17" stroke="#d4a44c" stroke-width="1" opacity="0.3"/>
+        <path d="M18 5 Q26 9 26 18 Q26 27 18 31 Q10 27 10 18 Q10 9 18 5Z" stroke="#d4a44c" stroke-width="1" fill="none" opacity="0.4"/>
+        <path d="M12 10 Q16 6 22 7" stroke="#d4a44c" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="21" cy="10" r="3.5" fill="#d4a44c" opacity="0.75"/>
+        <path d="M11 8 L9 5 M14 6 L13 3" stroke="#d4a44c" stroke-width="1" stroke-linecap="round" opacity="0.45"/>
+      </svg>
+      <div>
+        <div class="logo-text">Vakti</div>
+        <div class="logo-sub">Ramazan 1447</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="hijri-badge" id="hijriBadge">1447 Ramazan</div>
+      <button class="geo-btn" id="geoBtn" onclick="detectLocation()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.8" fill="currentColor"/><line x1="7" y1="1" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.3"/><line x1="7" y1="10.5" x2="7" y2="13" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="7" x2="3.5" y2="7" stroke="currentColor" stroke-width="1.3"/><line x1="10.5" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.3"/></svg>
+        Konumumu Bul
+      </button>
+      <div class="city-wrap">
+        <select class="city-sel" id="citySelect" onchange="onCitySelect()">
+          <option value="istanbul">📍 İstanbul</option>
+          <option value="ankara">📍 Ankara</option>
+          <option value="izmir">📍 İzmir</option>
+          <option value="bursa">📍 Bursa</option>
+          <option value="antalya">📍 Antalya</option>
+          <option value="adana">📍 Adana</option>
+          <option value="konya">📍 Konya</option>
+          <option value="gaziantep">📍 Gaziantep</option>
+        </select>
+        <span class="city-chev">▼</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="next-card">
+      <div class="ev-label">Bir Sonraki Vakit</div>
+      <div class="ev-name" id="evName">—</div>
+      <div class="ev-time" id="evTime">—:—</div>
+      <div class="cd-label">Kalan Süre</div>
+      <div class="cd-row">
+        <div class="cd-unit"><span class="cd-num" id="cdH">00</span><span class="cd-lbl">Saat</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-unit"><span class="cd-num" id="cdM">00</span><span class="cd-lbl">Dakika</span></div>
+        <div class="cd-sep">:</div>
+        <div class="cd-unit"><span class="cd-num" id="cdS">00</span><span class="cd-lbl">Saniye</span></div>
+      </div>
+      <div class="device-row" id="deviceRow">—</div>
+    </div>
+    <div class="prog-card">
+      <div class="prog-head">
+        <div>
+          <div class="prog-title">Oruç İlerlemesi</div>
+          <div class="prog-sub" id="progSub">Hesaplanıyor…</div>
+        </div>
+        <div class="prog-pct" id="progPct">—%</div>
+      </div>
+      <div>
+        <div class="fast-ends"><span id="fastFrom">Sahur: —</span><span id="fastTo">İftar: —</span></div>
+        <div class="track"><div class="fill" id="fill" style="width:0%"></div></div>
+        <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--txd);margin-top:6px"><span>Başlangıç</span><span>Bitiş</span></div>
+      </div>
+      <div class="fast-stats">
+        <div class="fstat"><span class="fstat-v" id="fTotal">—</span><span class="fstat-l">Toplam</span></div>
+        <div class="fstat"><span class="fstat-v" id="fElapsed">—</span><span class="fstat-l">Geçti</span></div>
+        <div class="fstat"><span class="fstat-v" id="fRemain">—</span><span class="fstat-l">Kaldı</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRAYER GRID -->
+  <div class="sec-title">Günlük Namaz Vakitleri</div>
+  <div class="pray-grid" id="prayGrid">
+    <!-- skeleton -->
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+    <div class="pray-card" style="min-height:130px"><div class="skel" style="height:34px;width:34px;border-radius:50%;margin:0 auto 10px"></div><div class="skel" style="height:8px;width:50%;margin:0 auto 8px"></div><div class="skel" style="height:22px;width:70%;margin:0 auto"></div></div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('qibla',this)">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><circle cx="6" cy="6" r="1.5" fill="currentColor"/><line x1="6" y1="1" x2="6" y2="3" stroke="currentColor" stroke-width="1.2"/></svg>
+      Kıble Yönü
+    </button>
+    <button class="tab-btn" onclick="switchTab('calendar',this)">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="2" width="10" height="9" rx="1.5" stroke="currentColor" stroke-width="1.1"/><line x1="1" y1="5" x2="11" y2="5" stroke="currentColor" stroke-width="1.1"/><line x1="3.5" y1="1" x2="3.5" y2="3.5" stroke="currentColor" stroke-width="1.1"/><line x1="8.5" y1="1" x2="8.5" y2="3.5" stroke="currentColor" stroke-width="1.1"/></svg>
+      Ramazan Takvimi
+    </button>
+  </div>
+
+  <!-- QIBLA TAB -->
+  <div class="tab-panel active" id="tab-qibla">
+    <div class="qibla-wrap">
+      <div class="qibla-compass">
+        <svg class="compass-svg" viewBox="0 0 220 220">
+          <defs>
+            <linearGradient id="ng" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c060"/>
+              <stop offset="100%" stop-color="#6a4010"/>
+            </linearGradient>
+          </defs>
+          <circle cx="110" cy="110" r="105" fill="#090d1c" stroke="rgba(212,164,76,.22)" stroke-width="1.5"/>
+          <circle cx="110" cy="110" r="94" fill="none" stroke="rgba(212,164,76,.06)" stroke-width="1"/>
+          <!-- Tick marks -->
+          <g id="compassTicks"></g>
+          <!-- Degree labels -->
+          <text x="110" y="22" text-anchor="middle" fill="#d4a44c" font-size="12" font-family="Cinzel,serif" font-weight="600">N</text>
+          <text x="110" y="206" text-anchor="middle" fill="rgba(212,164,76,.35)" font-size="12" font-family="Cinzel,serif">S</text>
+          <text x="203" y="115" text-anchor="middle" fill="rgba(212,164,76,.35)" font-size="12" font-family="Cinzel,serif">E</text>
+          <text x="17" y="115" text-anchor="middle" fill="rgba(212,164,76,.35)" font-size="12" font-family="Cinzel,serif">W</text>
+          <g id="needleG" class="needle-g" style="transform-origin:110px 110px">
+            <polygon points="110,32 114.5,110 110,100 105.5,110" fill="url(#ng)" opacity="0.9"/>
+            <polygon points="110,188 114.5,110 110,120 105.5,110" fill="rgba(212,164,76,.15)"/>
+            <circle cx="110" cy="110" r="8" fill="#090d1c" stroke="#d4a44c" stroke-width="1.5"/>
+            <circle cx="110" cy="110" r="3.5" fill="#d4a44c"/>
+          </g>
+          <text x="110" y="50" text-anchor="middle" fill="#d4a44c" font-size="8" font-family="Nunito,sans-serif" opacity="0.55" letter-spacing="1">KA'ABA</text>
+        </svg>
+        <div class="q-deg" id="qDeg">—°</div>
+        <div style="font-size:10px;color:var(--txd);letter-spacing:2px">KIBLE AÇISI</div>
+      </div>
+      <div class="q-info">
+        <div class="q-info-title">Kıble Yönü</div>
+        <div class="q-info-sub">Kıble, namaz kılarken yönelinen kutsal yön olup Mekke'deki Kâbe'yi işaret eder. Konumunuza göre hesaplanan gerçek kıble açısı aşağıda gösterilmektedir.</div>
+        <div class="q-stats" id="qStats">
+          <div class="q-stat"><span class="q-stat-name">Kıble Açısı</span><span class="q-stat-val" id="qsDeg">—</span></div>
+          <div class="q-stat"><span class="q-stat-name">Kâbe'ye Mesafe</span><span class="q-stat-val" id="qsDist">—</span></div>
+          <div class="q-stat"><span class="q-stat-name">Koordinatlar</span><span class="q-stat-val" id="qsCoord">—</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR TAB -->
+  <div class="tab-panel" id="tab-calendar">
+    <div class="cal-wrap">
+      <div class="cal-scroll">
+        <table class="cal-table">
+          <thead>
+            <tr>
+              <th class="cal-th" style="text-align:left;padding-left:16px">Gün</th>
+              <th class="cal-th">Sahur</th>
+              <th class="cal-th">Sabah</th>
+              <th class="cal-th">Öğle</th>
+              <th class="cal-th">İkindi</th>
+              <th class="cal-th">İftar</th>
+              <th class="cal-th">Yatsı</th>
+            </tr>
+          </thead>
+          <tbody id="calBody">
+            <tr><td colspan="7" style="padding:30px;text-align:center;color:var(--txd);font-size:12px;letter-spacing:1px">TAKVİM YÜKLENİYOR…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MOSQUE SILHOUETTE -->
+<div class="mosque-footer">
+  <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="width:100%;height:100%">
+    <path fill="#060912" d="M0,80 L0,50 L50,50 L50,36 L62,26 L62,14 L59,14 L59,4 L62,0 L65,4 L65,14 L62,14 L74,26 L74,36 L100,36 L100,26 L116,16 L132,26 L132,36 L158,36 L158,50 L200,50 L200,40 L218,28 L230,20 L230,8 L227,8 L227,2 L230,0 L233,2 L233,8 L230,8 L246,20 L262,28 L262,40 L280,40 L280,50 L330,50 L330,38 L355,24 L372,15 L372,5 L369,5 L369,1 L372,0 L375,1 L375,5 L372,5 L392,15 L416,24 L416,38 L440,38 L440,50 L500,50 L500,40 L526,27 L547,17 L547,5 L544,5 L544,1 L547,0 L550,1 L550,5 L547,5 L568,17 L594,27 L594,40 L618,40 L618,50 L680,50 L680,42 L708,30 L730,19 L730,7 L727,7 L727,1 L730,0 L733,1 L733,7 L730,7 L752,19 L780,30 L780,42 L805,42 L805,50 L860,50 L860,40 L885,27 L918,40 L918,50 L975,50 L975,41 L1000,29 L1022,18 L1022,7 L1019,7 L1019,1 L1022,0 L1025,1 L1025,7 L1022,7 L1044,18 L1070,29 L1070,41 L1096,41 L1096,50 L1160,50 L1160,42 L1186,30 L1210,42 L1210,50 L1280,50 L1280,42 L1304,32 L1330,42 L1330,50 L1390,50 L1390,56 L1440,56 L1440,80 Z"/>
+  </svg>
+</div>
+
+<!-- INSTALL PROMPT -->
+<div class="install-bar hidden" id="installBar">
+  <div>
+    <div class="install-text">📱 <span>Vakti</span>'yi Ana Ekrana Ekle</div>
+    <div class="install-sub">Uygulama gibi kullan · Çevrimdışı çalışır</div>
+  </div>
+  <button class="install-btn" id="installBtn">Ekle</button>
+  <button class="install-close" onclick="document.getElementById('installBar').classList.add('hidden')">✕</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONSTANTS & STATE
+// ═══════════════════════════════════════════════════════
+const CITIES = {
+  istanbul:  { name:'İstanbul',  lat:41.0082, lng:28.9784 },
+  ankara:    { name:'Ankara',    lat:39.9208, lng:32.8541 },
+  izmir:     { name:'İzmir',     lat:38.4237, lng:27.1428 },
+  bursa:     { name:'Bursa',     lat:40.1885, lng:29.0610 },
+  antalya:   { name:'Antalya',   lat:36.8841, lng:30.7056 },
+  adana:     { name:'Adana',     lat:37.0000, lng:35.3213 },
+  konya:     { name:'Konya',     lat:37.8746, lng:32.4932 },
+  gaziantep: { name:'Gaziantep', lat:37.0662, lng:37.3833 },
+};
+
+// Fallback times if API is unavailable
+const FALLBACK = {
+  Imsak:'06:10', Fajr:'06:22', Sunrise:'07:45',
+  Dhuhr:'13:22', Asr:'16:18', Maghrib:'18:48', Isha:'20:07'
+};
+
+let state = {
+  lat: CITIES.istanbul.lat,
+  lng: CITIES.istanbul.lng,
+  cityName: 'İstanbul',
+  todayTimes: null,
+  calendarData: [],
+  isOnline: navigator.onLine,
+};
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+const pad = n => String(n).padStart(2,'0');
+const t2m = t => { if(!t) return 0; const [h,m]=t.split(':').map(Number); return h*60+m; };
+
+function formatHM(totalMin) {
+  totalMin = Math.max(0, Math.round(totalMin));
+  const h = Math.floor(totalMin/60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}s${m?m+'d':''}` : `${m}d`;
+}
+
+function addMin(t, delta) {
+  const total = t2m(t) + delta;
+  return pad(Math.floor(((total % 1440) + 1440) % 1440 / 60)) + ':' + pad(((total % 1440) + 1440) % 1440 % 60);
+}
+
+// ═══════════════════════════════════════════════════════
+// CACHE (localStorage)
+// ═══════════════════════════════════════════════════════
+const Cache = {
+  key: (type, lat, lng, extra='') => `vakti_${type}_${lat.toFixed(2)}_${lng.toFixed(2)}_${extra}`,
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify({ts:Date.now(), v})); } catch(e){} },
+  get(k, maxAgeMs=3600000) {
+    try {
+      const item = JSON.parse(localStorage.getItem(k));
+      if (item && Date.now()-item.ts < maxAgeMs) return item.v;
+    } catch(e){}
+    return null;
+  }
+};
+
+// ═══════════════════════════════════════════════════════
+// ALADHAN API
+// ═══════════════════════════════════════════════════════
+const API_BASE = 'https://api.aladhan.com/v1';
+const METHOD = 13; // Diyanet İşleri Başkanlığı
+
+async function fetchTimings(lat, lng, dateStr) {
+  const cKey = Cache.key('day', lat, lng, dateStr);
+  const cached = Cache.get(cKey, 6*3600000);
+  if (cached) return cached;
+  try {
+    const url = `${API_BASE}/timings?latitude=${lat}&longitude=${lng}&method=${METHOD}&date=${dateStr}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('API error');
+    const json = await res.json();
+    const data = { timings: json.data.timings, hijri: json.data.date.hijri };
+    Cache.set(cKey, data);
+    return data;
+  } catch(e) {
+    return null;
+  }
+}
+
+async function fetchMonthCalendar(lat, lng, year, month) {
+  const cKey = Cache.key('month', lat, lng, `${year}-${month}`);
+  const cached = Cache.get(cKey, 24*3600000);
+  if (cached) return cached;
+  try {
+    const url = `${API_BASE}/calendar/${year}/${month}?latitude=${lat}&longitude=${lng}&method=${METHOD}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('API error');
+    const json = await res.json();
+    Cache.set(cKey, json.data);
+    return json.data;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// QIBLA MATH
+// ═══════════════════════════════════════════════════════
+function calcQibla(lat, lng) {
+  const mLat = 21.3891 * Math.PI/180;
+  const mLng = 39.8579 * Math.PI/180;
+  const uLat = lat * Math.PI/180;
+  const uLng = lng * Math.PI/180;
+  const dL = mLng - uLng;
+  const y = Math.sin(dL) * Math.cos(mLat);
+  const x = Math.cos(uLat)*Math.sin(mLat) - Math.sin(uLat)*Math.cos(mLat)*Math.cos(dL);
+  return ((Math.atan2(y,x)*180/Math.PI)+360)%360;
+}
+
+function calcDistToMecca(lat, lng) {
+  const R = 6371;
+  const mLat=21.3891, mLng=39.8579;
+  const dLat=(mLat-lat)*Math.PI/180;
+  const dLng=(mLng-lng)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat*Math.PI/180)*Math.cos(mLat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+// ═══════════════════════════════════════════════════════
+// STATUS BANNER
+// ═══════════════════════════════════════════════════════
+function showBanner(type, msg) {
+  const configs = {
+    offline: { cls:'banner-offline', dot:'dot-red', icon:'📡' },
+    loading: { cls:'banner-loading', dot:'dot-gold', icon:'🌙' },
+    ok:      { cls:'banner-ok',      dot:'dot-green', icon:'✓' },
+  };
+  const c = configs[type];
+  document.getElementById('statusBanner').innerHTML = `
+    <div class="banner ${c.cls}">
+      <div class="banner-dot ${c.dot}"></div>
+      ${msg}
+    </div>`;
+  if (type === 'ok') setTimeout(() => { document.getElementById('statusBanner').innerHTML=''; }, 3000);
+}
+
+function clearBanner() { document.getElementById('statusBanner').innerHTML=''; }
+
+// ═══════════════════════════════════════════════════════
+// GEOLOCATION
+// ═══════════════════════════════════════════════════════
+function detectLocation() {
+  if (!navigator.geolocation) {
+    showBanner('offline','Konum servisi bu tarayıcıda desteklenmiyor.');
+    return;
+  }
+  const btn = document.getElementById('geoBtn');
+  btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.3" opacity="0.3"/><path d="M7 2 A5 5 0 0 1 12 7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Bulunuyor…`;
+  btn.style.color = 'var(--gold)';
+  showBanner('loading','Konum algılanıyor…');
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      state.lat = pos.coords.latitude;
+      state.lng = pos.coords.longitude;
+      state.cityName = `${state.lat.toFixed(2)}°K, ${state.lng.toFixed(2)}°D`;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.8" fill="currentColor"/><line x1="7" y1="1" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.3"/><line x1="7" y1="10.5" x2="7" y2="13" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="7" x2="3.5" y2="7" stroke="currentColor" stroke-width="1.3"/><line x1="10.5" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.3"/></svg> Konumum`;
+      btn.style.color = 'var(--gold)';
+      await loadData();
+    },
+    err => {
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="1.8" fill="currentColor"/><line x1="7" y1="1" x2="7" y2="3.5" stroke="currentColor" stroke-width="1.3"/><line x1="7" y1="10.5" x2="7" y2="13" stroke="currentColor" stroke-width="1.3"/><line x1="1" y1="7" x2="3.5" y2="7" stroke="currentColor" stroke-width="1.3"/><line x1="10.5" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.3"/></svg> Konumumu Bul`;
+      btn.style.color = '';
+      showBanner('offline','Konum izni verilmedi. Şehir listesinden seçim yapabilirsiniz.');
+    },
+    { timeout:8000, maximumAge:300000 }
+  );
+}
+
+function onCitySelect() {
+  const key = document.getElementById('citySelect').value;
+  const c = CITIES[key];
+  state.lat = c.lat;
+  state.lng = c.lng;
+  state.cityName = c.name;
+  loadData();
+}
+
+// ═══════════════════════════════════════════════════════
+// LOAD DATA
+// ═══════════════════════════════════════════════════════
+async function loadData() {
+  const now = new Date();
+  const dateStr = `${pad(now.getDate())}-${pad(now.getMonth()+1)}-${now.getFullYear()}`;
+
+  showBanner('loading', `${state.cityName} için vakitler yükleniyor…`);
+
+  const result = await fetchTimings(state.lat, state.lng, dateStr);
+  if (result) {
+    state.todayTimes = result.timings;
+    if (result.hijri) {
+      const h = result.hijri;
+      document.getElementById('hijriBadge').textContent = `${h.day} ${h.month.ar} ${h.year}`;
+    }
+    showBanner('ok', `✓ ${state.cityName} – Gerçek vakitler yüklendi`);
+  } else {
+    state.todayTimes = FALLBACK;
+    showBanner('offline', `⚠ Çevrimdışı – ${state.cityName} için varsayılan vakitler kullanılıyor`);
+  }
+
+  renderPrayGrid();
+  renderQibla();
+  loadCalendar();
+}
+
+// ═══════════════════════════════════════════════════════
+// PRAYER GRID
+// ═══════════════════════════════════════════════════════
+const PRAYERS = [
+  { key:'Imsak',   label:'Sahur',    icon: pImsak  },
+  { key:'Fajr',    label:'Sabah',    icon: pFajr   },
+  { key:'Dhuhr',   label:'Öğle',     icon: pDhuhr  },
+  { key:'Asr',     label:'İkindi',   icon: pAsr    },
+  { key:'Maghrib', label:'İftar',    icon: pMaghr  },
+  { key:'Isha',    label:'Teravih',  icon: pIsha   },
+];
+
+function pImsak() { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="#d4a44c" stroke-width="1" opacity="0.5"/><path d="M10 3 Q15 6.5 15 10 Q15 13.5 10 17 Q5 13.5 5 10 Q5 6.5 10 3Z" stroke="#d4a44c" stroke-width="1" fill="none" opacity="0.7"/><circle cx="10" cy="10" r="2" fill="#d4a44c" opacity="0.5"/></svg>`; }
+function pFajr()  { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2.5L10 5M16 4L14.1 5.9M17.5 10L15 10M16 16L14.1 14.1M10 17.5L10 15M4 16L5.9 14.1M2.5 10L5 10M4 4L5.9 5.9" stroke="#d4a44c" stroke-width="1.3" stroke-linecap="round" opacity="0.6"/><circle cx="10" cy="10" r="3.5" stroke="#d4a44c" stroke-width="1.3" opacity="0.6"/></svg>`; }
+function pDhuhr() { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 13Q10 4 17 13" stroke="#d4a44c" stroke-width="1.3" fill="none" opacity="0.6"/><circle cx="10" cy="9" r="3" stroke="#d4a44c" stroke-width="1.3" opacity="0.6"/><line x1="2" y1="14" x2="18" y2="14" stroke="#d4a44c" stroke-width="1" opacity="0.4"/></svg>`; }
+function pAsr()   { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 15.5Q10 7 16 15.5" stroke="#d4a44c" stroke-width="1.3" fill="none" opacity="0.6"/><circle cx="10" cy="12" r="2.5" stroke="#d4a44c" stroke-width="1.3" opacity="0.6"/><line x1="2" y1="16.5" x2="18" y2="16.5" stroke="#d4a44c" stroke-width="1" opacity="0.4"/></svg>`; }
+function pMaghr() { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 12Q6 17 10 17Q14 17 16 12" stroke="#d4a44c" stroke-width="1.3" fill="none" opacity="0.9"/><path d="M6 12Q6 4 10 4Q14 4 14 12" stroke="#d4a44c" stroke-width="1.3" fill="none" opacity="0.9"/><line x1="2.5" y1="12" x2="17.5" y2="12" stroke="#d4a44c" stroke-width="1" opacity="0.6"/></svg>`; }
+function pIsha()  { return`<svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#d4a44c" stroke-width="1" opacity="0.4"/><path d="M10 5Q14 7.5 14 10Q14 12.5 10 15Q6 12.5 6 10Q6 7.5 10 5Z" stroke="#d4a44c" stroke-width="1.1" fill="none" opacity="0.5"/><path d="M4 4L5.5 3L5 4.5Z" fill="#d4a44c" opacity="0.6"/></svg>`; }
+
+function renderPrayGrid() {
+  const t = state.todayTimes;
+  if (!t) return;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes() + now.getSeconds()/60;
+  const order = PRAYERS.map(p=>p.key);
+  let active = null;
+  for (let i=0;i<order.length-1;i++) {
+    if (nowMin >= t2m(t[order[i]]) && nowMin < t2m(t[order[i+1]])) { active=order[i]; break; }
+  }
+  if (!active && nowMin >= t2m(t['Isha'])) active='Isha';
+
+  document.getElementById('prayGrid').innerHTML = PRAYERS.map(p => {
+    const isActive = p.key === active;
+    return `
+    <div class="pray-card ${isActive?'active':''}">
+      <div class="active-dot"></div>
+      <div class="p-icon">${p.icon()}</div>
+      <span class="p-name">${p.label}${isActive?'<span class="now-badge">Şimdi</span>':''}</span>
+      <div class="p-time">${t[p.key]||'—'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// COUNTDOWN + FAST PROGRESS (ticks every second)
+// ═══════════════════════════════════════════════════════
+function tick() {
+  const now = new Date();
+  const nowSec = now.getHours()*3600 + now.getMinutes()*60 + now.getSeconds();
+  document.getElementById('deviceRow').textContent =
+    `${pad(now.getDate())}.${pad(now.getMonth()+1)}.${now.getFullYear()} — ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+
+  if (!state.todayTimes) return;
+  const t = state.todayTimes;
+  const order = PRAYERS.map(p=>p.key);
+  const labels = { Imsak:'Sahur',Fajr:'Sabah',Dhuhr:'Öğle',Asr:'İkindi',Maghrib:'İftar',Isha:'Teravih' };
+
+  // Next prayer
+  let next = null;
+  for (const k of order) {
+    if (t2m(t[k])*60 > nowSec) { next=k; break; }
+  }
+  if (!next) next = 'Imsak';
+
+  document.getElementById('evName').textContent = labels[next];
+  document.getElementById('evTime').textContent = t[next] || '—';
+
+  let diffSec = t2m(t[next])*60 - nowSec;
+  if (diffSec < 0) diffSec += 86400;
+  document.getElementById('cdH').textContent = pad(Math.floor(diffSec/3600));
+  document.getElementById('cdM').textContent = pad(Math.floor((diffSec%3600)/60));
+  document.getElementById('cdS').textContent = pad(diffSec%60);
+
+  // Fast progress (Imsak → Maghrib)
+  const sahurMin = t2m(t.Imsak);
+  const iftarMin = t2m(t.Maghrib);
+  const nowMin   = nowSec/60;
+  const total    = iftarMin - sahurMin;
+
+  document.getElementById('fastFrom').textContent = `Sahur: ${t.Imsak}`;
+  document.getElementById('fastTo').textContent   = `İftar: ${t.Maghrib}`;
+  document.getElementById('fTotal').textContent   = formatHM(total);
+
+  let pct=0, elapsed=0, remain=total;
+  if (nowMin >= sahurMin && nowMin < iftarMin) {
+    elapsed = nowMin - sahurMin;
+    remain  = iftarMin - nowMin;
+    pct = Math.min(100,(elapsed/total)*100);
+    document.getElementById('progSub').textContent = 'Oruç devam ediyor';
+  } else if (nowMin >= iftarMin) {
+    pct=100; elapsed=total; remain=0;
+    document.getElementById('progSub').textContent = 'Oruç tamamlandı! 🌙';
+  } else {
+    document.getElementById('progSub').textContent = 'Sahur vaktinden önce';
+  }
+
+  document.getElementById('progPct').textContent  = Math.round(pct)+'%';
+  document.getElementById('fill').style.width     = pct+'%';
+  document.getElementById('fElapsed').textContent = elapsed > 1 ? formatHM(elapsed) : '—';
+  document.getElementById('fRemain').textContent  = remain  > 1 ? formatHM(remain)  : '—';
+}
+
+// ═══════════════════════════════════════════════════════
+// QIBLA
+// ═══════════════════════════════════════════════════════
+function renderQibla() {
+  const q   = calcQibla(state.lat, state.lng);
+  const d   = calcDistToMecca(state.lat, state.lng);
+  const qr  = Math.round(q);
+  document.getElementById('qDeg').textContent       = qr+'°';
+  document.getElementById('qsDeg').textContent      = qr+'° (Kuzeyden)';
+  document.getElementById('qsDist').textContent     = d.toLocaleString('tr-TR')+' km';
+  document.getElementById('qsCoord').textContent    = `${state.lat.toFixed(2)}°K, ${state.lng.toFixed(2)}°D`;
+  document.getElementById('needleG').style.transform = `rotate(${q}deg)`;
+
+  // Draw ticks
+  const tickG = document.getElementById('compassTicks');
+  tickG.innerHTML='';
+  for(let i=0;i<72;i++){
+    const a=i*5;
+    const big=a%90===0, med=a%45===0;
+    const len=big?12:med?8:5;
+    const x1=110+100*Math.sin(a*Math.PI/180);
+    const y1=110-100*Math.cos(a*Math.PI/180);
+    const x2=110+(100-len)*Math.sin(a*Math.PI/180);
+    const y2=110-(100-len)*Math.cos(a*Math.PI/180);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',x1);line.setAttribute('y1',y1);
+    line.setAttribute('x2',x2);line.setAttribute('y2',y2);
+    line.setAttribute('stroke',`rgba(212,164,76,${big?.5:med?.3:.15})`);
+    line.setAttribute('stroke-width',big?1.5:med?1:.7);
+    tickG.appendChild(line);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// CALENDAR
+// ═══════════════════════════════════════════════════════
+const MONTHS_TR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+
+async function loadCalendar() {
+  const body = document.getElementById('calBody');
+  body.innerHTML = `<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--txd);font-size:11px;letter-spacing:1.5px">TAKVİM YÜKLENİYOR…</td></tr>`;
+
+  // Ramazan 1447: roughly Feb 18 – Mar 19 2026
+  const [feb, mar] = await Promise.all([
+    fetchMonthCalendar(state.lat, state.lng, 2026, 2),
+    fetchMonthCalendar(state.lat, state.lng, 2026, 3),
+  ]);
+
+  const today = new Date();
+  let rows = [];
+
+  const filterRamadan = (arr) => arr ? arr.filter(d => d.date && d.date.hijri && d.date.hijri.month.number === 9) : [];
+  rows = [...filterRamadan(feb), ...filterRamadan(mar)];
+
+  // Fallback: generate synthetic 30-day calendar
+  if (!rows.length) {
+    const base = new Date(2026,1,18);
+    rows = Array.from({length:30},(_,i)=>{
+      const d=new Date(base);d.setDate(d.getDate()+i);
+      return {
+        date:{gregorian:{day:pad(d.getDate()),monthIndex:d.getMonth(),year:d.getFullYear()},hijri:{day:String(i+1),month:{ar:'رمضان'}}},
+        timings:{
+          Imsak: addMin(FALLBACK.Imsak, i),
+          Fajr:  addMin(FALLBACK.Fajr, i),
+          Dhuhr: addMin(FALLBACK.Dhuhr, i),
+          Asr:   addMin(FALLBACK.Asr, i),
+          Maghrib:addMin(FALLBACK.Maghrib, Math.round(i*1.8)),
+          Isha:  addMin(FALLBACK.Isha, Math.round(i*1.7)),
+        }
+      };
+    });
+  }
+
+  body.innerHTML = rows.map(r => {
+    const g = r.date.gregorian;
+    const h = r.date.hijri;
+    const gDate = new Date(g.year||2026, g.monthIndex||(g.month&&g.month.number-1)||0, parseInt(g.day));
+    const isToday = gDate.getDate()===today.getDate() && gDate.getMonth()===today.getMonth() && gDate.getFullYear()===today.getFullYear();
+    const tm = r.timings;
+    return `
+    <tr class="cal-tr ${isToday?'today':''}">
+      <td class="cal-td"><span class="cal-day">${pad(parseInt(g.day))} ${MONTHS_TR[gDate.getMonth()]}</span><span class="cal-hijri">${h.day} ${h.month.ar}</span></td>
+      <td class="cal-td t-sahur">${tm.Imsak||tm.Fajr||'—'}</td>
+      <td class="cal-td">${tm.Fajr||'—'}</td>
+      <td class="cal-td">${tm.Dhuhr||'—'}</td>
+      <td class="cal-td">${tm.Asr||'—'}</td>
+      <td class="cal-td t-iftar">${tm.Maghrib||'—'}</td>
+      <td class="cal-td">${tm.Isha||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  setTimeout(() => {
+    const todayRow = body.querySelector('.today');
+    if (todayRow) todayRow.scrollIntoView({behavior:'smooth',block:'center'});
+  }, 300);
+}
+
+// ═══════════════════════════════════════════════════════
+// TAB
+// ═══════════════════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ═══════════════════════════════════════════════════════
+// STAR CANVAS
+// ═══════════════════════════════════════════════════════
+function initCanvas() {
+  const canvas=document.getElementById('bg');
+  const ctx=canvas.getContext('2d');
+  let stars=[], W, H;
+  const resize=()=>{ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; initStars(); };
+  function initStars() {
+    stars=[];
+    for(let i=0;i<120;i++) stars.push({
+      x:Math.random()*W, y:Math.random()*H*.72,
+      r:Math.random()*1.3+.2, a:Math.random(),
+      da:(Math.random()*.003+.001)*(Math.random()<.5?1:-1),
+    });
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const g=ctx.createRadialGradient(W*.5,H*.18,0,W*.5,H*.3,H);
+    g.addColorStop(0,'#0e1630'); g.addColorStop(.6,'#090d1c'); g.addColorStop(1,'#060912');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    const g2=ctx.createRadialGradient(W*.88,H*.04,0,W*.88,H*.04,W*.4);
+    g2.addColorStop(0,'rgba(212,164,76,.05)'); g2.addColorStop(1,'transparent');
+    ctx.fillStyle=g2; ctx.fillRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.a+=s.da; if(s.a>1||s.a<0)s.da*=-1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${s.a*.75})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  resize(); draw();
+  window.addEventListener('resize', resize);
+}
+
+// ═══════════════════════════════════════════════════════
+// ONLINE / OFFLINE EVENTS
+// ═══════════════════════════════════════════════════════
+window.addEventListener('online',  () => { showBanner('ok','İnternet bağlantısı sağlandı'); loadData(); });
+window.addEventListener('offline', () => { showBanner('offline','Çevrimdışı – kaydedilmiş vakitler kullanılıyor'); });
+
+// ═══════════════════════════════════════════════════════
+// PWA INSTALL PROMPT
+// ═══════════════════════════════════════════════════════
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBar').classList.remove('hidden');
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBar').classList.add('hidden');
+});
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBar').classList.add('hidden');
+  showBanner('ok','Vakti ana ekrana eklendi!');
+});
+
+// ═══════════════════════════════════════════════════════
+// SERVICE WORKER
+// ═══════════════════════════════════════════════════════
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+initCanvas();
+loadData();
+setInterval(tick, 1000);
+tick();
+</script>
+</body>
+</html>
